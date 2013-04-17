@@ -30,7 +30,7 @@ namespace ServerClientTCP
         private BinaryReader br;
         private BinaryWriter bw;
         /// <summary>保存连接的所有用户</summary>
-        private List<Client> userList = new List<Client>();
+        private List<Users> userList = new List<Users>();
 
         public ClientForm()
         {
@@ -74,10 +74,10 @@ namespace ServerClientTCP
             threadReceive.IsBackground = true;
             threadReceive.Start();
             //创建一个线程接收远程主机发来的信息
-            Thread myThread = new Thread(ReceiveMessage);
+            Thread threadUDPReceive = new Thread(ReceiveMessage);
             //将线程设为后台运行
-            myThread.IsBackground = true;
-            myThread.Start();
+            threadUDPReceive.IsBackground = true;
+            threadUDPReceive.Start();
         }
         /// <summary>接收客户端连接</summary>
         private void ReceiveMessage()
@@ -129,18 +129,26 @@ namespace ServerClientTCP
         {
             string message = (string)obj;
             sendUdpClient = new UdpClient(0);
-            byte[] bytes = System.Text.Encoding.Unicode.GetBytes(message);
-            IPEndPoint iep = new IPEndPoint(initIP, userList[0].port);
-            try
+            if (L_OnlineStatus.SelectedIndex != -1)
             {
-                sendUdpClient.Send(bytes, bytes.Length, iep);
-                AddTalkMessage(string.Format("向{0}发送：{1}", iep, message));
-                ClearTextBox();
+                message = "Talk" + this.L_OnlineStatus.SelectedItem.ToString() + " " + this.R_SendMessage.Text;
+                byte[] bytes = System.Text.Encoding.Unicode.GetBytes(message);
+                IPEndPoint iep = new IPEndPoint(initIP, userList[0].port);
+                try
+                {
+                    sendUdpClient.Send(bytes, bytes.Length, iep);
+                    AddTalkMessage(string.Format("向{0}发送：{1}", iep, message));
+                    ClearTextBox();
+                }
+                catch (Exception ex)
+                {
+                    AddTalkMessage("发送出错:" + ex.Message);
+                }
             }
-            catch (Exception ex)
+            else
             {
-                AddTalkMessage("发送出错:" + ex.Message);
-            }
+                MessageBox.Show("请先在[当前在线]中选择一个对话者");
+            } 
         }
         /// <summary>处理接收的服务器端数据</summary>
         private void ReceiveData()
@@ -168,7 +176,7 @@ namespace ServerClientTCP
                 switch (command)
                 {
                     case "login":  //格式：login,用户名
-                        Client user = new Client(splitString[1], Convert.ToInt32(splitString[2]));
+                        Users user = new Users(splitString[1], Convert.ToInt32(splitString[2]));
                         userList.Add(user);
                         AddOnline(splitString[1]);
                         break;
@@ -183,7 +191,7 @@ namespace ServerClientTCP
                             splitString[1], receiveString.Substring(
                             splitString[0].Length + splitString[1].Length + 2)));
                         //测试当前在线用户列表
-                        foreach (Client target in userList)
+                        foreach (Users target in userList)
                         {
                             AddTalkMessage(target.userName +":"+ target.port);
                         }
@@ -210,7 +218,7 @@ namespace ServerClientTCP
             }
         }
         /// <summary>关闭窗口时触发的事件</summary>
-        private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
+        private void ClientForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             //未与服务器连接前client为null
             if (client != null)

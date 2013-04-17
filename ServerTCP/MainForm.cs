@@ -128,6 +128,7 @@ namespace ServerTCP
                     case "Login":
                         user.userName = splitString[1];
                         AddItemToUserBox(user.userName);
+                        AddItemToListBox(user.userName);
                         SendToAllClient(user, receiveString+","+user.port);
                         break;
                     case "Logout":
@@ -267,7 +268,7 @@ namespace ServerTCP
         {
             if (L_ClientList.InvokeRequired)
             {
-                RemoveItemFromUserBoxDelegate d = AddItemToListBox;
+                RemoveItemFromUserBoxDelegate d = RemoveItemFromUserBox;
                 L_ClientList.Invoke(d, user);
             }
             else

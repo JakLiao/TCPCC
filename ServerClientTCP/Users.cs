@@ -7,11 +7,12 @@ using System.IO;
 
 namespace ClientTCP
 {
-    class Client
+    class Users
     {
         public string userName { get; set; }
         public int port { get; set; }
-        public Client(string userName, int port)
+
+        public Users(string userName, int port)
         {
             this.userName = userName;
             this.port = port;
