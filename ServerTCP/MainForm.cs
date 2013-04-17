@@ -138,8 +138,7 @@ namespace ServerTCP
                         return;
                     case "Talk":
                         string talkString = receiveString.Substring(splitString[0].Length + splitString[1].Length + 2);
-                        AddItemToListBox(string.Format("{0}对{1}说：{2}",
-                            user.userName, splitString[1], talkString));
+                        AddItemToListBox(string.Format("{0}对{1}说：{2}",user.userName, splitString[1], talkString));
                         //以下语句返回给发言方
                         //SendToClient(user, "talk," + user.userName + "," + talkString);
                         //发送给接受方

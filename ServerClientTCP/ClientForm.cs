@@ -74,13 +74,13 @@ namespace ServerClientTCP
             threadReceive.IsBackground = true;
             threadReceive.Start();
             //创建一个线程接收远程主机发来的信息
-            Thread threadUDPReceive = new Thread(ReceiveMessage);
+            Thread threadUDPReceive = new Thread(new ThreadStart(ReceiveUDPMessage));
             //将线程设为后台运行
             threadUDPReceive.IsBackground = true;
             threadUDPReceive.Start();
         }
         /// <summary>接收客户端连接</summary>
-        private void ReceiveMessage()
+        private void ReceiveUDPMessage()
         {
             int localPort;
             Random r = new Random((int)DateTime.Now.Ticks);
@@ -108,9 +108,22 @@ namespace ServerClientTCP
         /// <summary>【发送】按钮的Click事件</summary>
         private void B_SendMessage_Click(object sender, EventArgs e)
         {
-            Thread t = new Thread(SendUDPMessage);
-            t.IsBackground = true;
-            t.Start(R_SendMessage.Text);
+            string sendText = R_SendMessage.Text;
+            string toUser = "";
+            if (L_OnlineStatus.SelectedIndex != -1)
+            {
+                toUser = this.L_OnlineStatus.SelectedItem.ToString();
+            }
+            else
+            {
+                MessageBox.Show("请先在[当前在线]中选择一个对话者");
+            }
+            
+            Thread threadUDPSend = new Thread(() =>
+                SendUDPMessage(toUser, sendText)
+            );
+            threadUDPSend.IsBackground = true;
+            threadUDPSend.Start();
             //#region 通过server发信息
             //if (L_OnlineStatus.SelectedIndex != -1)
             //{
@@ -125,30 +138,32 @@ namespace ServerClientTCP
             //#endregion
         }
         /// <summary>发送数据到远程主机</summary>
-        private void SendUDPMessage(object obj)
+        private void SendUDPMessage(string toUser, string sendText)
         {
-            string message = (string)obj;
+            string message;
+            int toPort = 10001;
             sendUdpClient = new UdpClient(0);
-            if (L_OnlineStatus.SelectedIndex != -1)
+            message = "talk," + toUser + "," + sendText;
+            byte[] bytes = System.Text.Encoding.Unicode.GetBytes(message);
+            foreach (Users target in userList)
             {
-                message = "Talk" + this.L_OnlineStatus.SelectedItem.ToString() + " " + this.R_SendMessage.Text;
-                byte[] bytes = System.Text.Encoding.Unicode.GetBytes(message);
-                IPEndPoint iep = new IPEndPoint(initIP, userList[0].port);
-                try
+                if (target.userName == toUser)
                 {
-                    sendUdpClient.Send(bytes, bytes.Length, iep);
-                    AddTalkMessage(string.Format("向{0}发送：{1}", iep, message));
-                    ClearTextBox();
-                }
-                catch (Exception ex)
-                {
-                    AddTalkMessage("发送出错:" + ex.Message);
+                    toPort = target.port;
+                    break;
                 }
             }
-            else
+            IPEndPoint iep = new IPEndPoint(initIP, toPort);
+            try
             {
-                MessageBox.Show("请先在[当前在线]中选择一个对话者");
-            } 
+                sendUdpClient.Send(bytes, bytes.Length, iep);
+                AddTalkMessage(string.Format("向{0}发送：{1}", toUser, message));
+                ClearTextBox();
+            }
+            catch (Exception ex)
+            {
+                AddTalkMessage("发送出错:" + ex.Message);
+            }
         }
         /// <summary>处理接收的服务器端数据</summary>
         private void ReceiveData()
@@ -191,10 +206,10 @@ namespace ServerClientTCP
                             splitString[1], receiveString.Substring(
                             splitString[0].Length + splitString[1].Length + 2)));
                         //测试当前在线用户列表
-                        foreach (Users target in userList)
-                        {
-                            AddTalkMessage(target.userName +":"+ target.port);
-                        }
+                        //foreach (Users target in userList)
+                        //{
+                        //    AddTalkMessage(target.userName +":"+ target.port);
+                        //}
                         break;
                     default:
                         AddTalkMessage("什么意思啊：" + receiveString);
