@@ -293,5 +293,13 @@ namespace ServerTCP
             }
         }
 
+        private void R_SendMessage_TextChanged(object sender, EventArgs e)
+        {
+            if (R_SendMessage.Text.Length == 0)
+                B_SendMessage.Enabled = false;
+            else
+                B_SendMessage.Enabled = true;
+        }
+
     }
 }

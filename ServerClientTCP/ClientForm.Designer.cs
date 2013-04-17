@@ -63,6 +63,7 @@
             // 
             // T_Port
             // 
+            this.T_Port.Enabled = false;
             this.T_Port.Location = new System.Drawing.Point(107, 57);
             this.T_Port.Name = "T_Port";
             this.T_Port.Size = new System.Drawing.Size(170, 21);
@@ -71,6 +72,7 @@
             // 
             // T_IPAddress
             // 
+            this.T_IPAddress.Enabled = false;
             this.T_IPAddress.Location = new System.Drawing.Point(107, 17);
             this.T_IPAddress.Name = "T_IPAddress";
             this.T_IPAddress.Size = new System.Drawing.Size(170, 21);
@@ -111,10 +113,12 @@
             this.R_SendMessage.Size = new System.Drawing.Size(249, 85);
             this.R_SendMessage.TabIndex = 13;
             this.R_SendMessage.Text = "";
+            this.R_SendMessage.TextChanged += new System.EventHandler(this.R_SendMessage_TextChanged);
             this.R_SendMessage.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.B_SendMessage_KeyPress);
             // 
             // B_SendMessage
             // 
+            this.B_SendMessage.Enabled = false;
             this.B_SendMessage.Location = new System.Drawing.Point(175, 335);
             this.B_SendMessage.Name = "B_SendMessage";
             this.B_SendMessage.Size = new System.Drawing.Size(102, 23);

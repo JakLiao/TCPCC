@@ -44,6 +44,7 @@
             // 
             // B_SendMessage
             // 
+            this.B_SendMessage.Enabled = false;
             this.B_SendMessage.Location = new System.Drawing.Point(198, 337);
             this.B_SendMessage.Name = "B_SendMessage";
             this.B_SendMessage.Size = new System.Drawing.Size(98, 23);
@@ -70,6 +71,7 @@
             this.R_SendMessage.Size = new System.Drawing.Size(251, 72);
             this.R_SendMessage.TabIndex = 2;
             this.R_SendMessage.Text = "";
+            this.R_SendMessage.TextChanged += new System.EventHandler(this.R_SendMessage_TextChanged);
             this.R_SendMessage.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.B_SendMessage_KeyPress);
             // 
             // label1
