@@ -13,6 +13,7 @@ namespace ServerTCP
         public BinaryReader br { get; private set; }
         public BinaryWriter bw { get; private set; }
         public string userName { get; set; }
+        public string port { get; set; }
         public User(TcpClient client)
         {
             this.client = client;

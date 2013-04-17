@@ -10,6 +10,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.IO;
+using ClientTCP;
 
 namespace ServerClientTCP
 {
@@ -20,10 +21,16 @@ namespace ServerClientTCP
         private int initPort;
         private static byte[] message = new byte[1024];
 
+        /// <summary>接收用</summary>
+        private UdpClient receiveUdpClient;
+        /// <summary>发送用</summary>
+        private UdpClient sendUdpClient;
         private bool isExit = false;
         private TcpClient client;
         private BinaryReader br;
         private BinaryWriter bw;
+        /// <summary>保存连接的所有用户</summary>
+        private List<Client> userList = new List<Client>();
 
         public ClientForm()
         {
@@ -37,8 +44,7 @@ namespace ServerClientTCP
         {
             this.initIP = IPAddress.Parse(T_IPAddress.Text.ToString().Trim());
             this.initPort = Convert.ToInt32(T_Port.Text.ToString().Trim());
-            Control.CheckForIllegalCrossThreadCalls = false;
-            
+            //Control.CheckForIllegalCrossThreadCalls = false;
         }
         /// <summary>
         /// 【连接服务器】按钮的Click事件
@@ -67,19 +73,73 @@ namespace ServerClientTCP
             Thread threadReceive = new Thread(new ThreadStart(ReceiveData));
             threadReceive.IsBackground = true;
             threadReceive.Start();
+            //创建一个线程接收远程主机发来的信息
+            Thread myThread = new Thread(ReceiveMessage);
+            //将线程设为后台运行
+            myThread.IsBackground = true;
+            myThread.Start();
         }
+        /// <summary>接收客户端连接</summary>
+        private void ReceiveMessage()
+        {
+            int localPort;
+            Random r = new Random((int)DateTime.Now.Ticks);
+            localPort = r.Next(10000, 60000);
+            IPEndPoint local = new IPEndPoint(initIP, localPort);
+            receiveUdpClient = new UdpClient(local);
+            IPEndPoint remote = new IPEndPoint(IPAddress.Any, 0);
+            while (true)
+            {
+                try
+                {
+                    //关闭udpClient时此句会产生异常
+                    byte[] receiveBytes = receiveUdpClient.Receive(ref remote);
+                    string receiveMessage = Encoding.Unicode.GetString(
+                        receiveBytes, 0, receiveBytes.Length);
+                    AddTalkMessage(string.Format("来自{0}：{1}", remote, receiveMessage));
+                }
+                catch
+                {
+                    break;
+                }
+            }
+        }
+
         /// <summary>【发送】按钮的Click事件</summary>
         private void B_SendMessage_Click(object sender, EventArgs e)
         {
-            if (L_OnlineStatus.SelectedIndex != -1)
+            Thread t = new Thread(SendUDPMessage);
+            t.IsBackground = true;
+            t.Start(R_SendMessage.Text);
+            //#region 通过server发信息
+            //if (L_OnlineStatus.SelectedIndex != -1)
+            //{
+            //    SendMessage("Talk," + L_OnlineStatus.SelectedItem + "," + R_SendMessage.Text);
+            //    AddTalkMessage("我说：" + R_SendMessage.Text);
+            //    R_SendMessage.Clear();
+            //}
+            //else
+            //{
+            //    MessageBox.Show("请先在[当前在线]中选择一个对话者");
+            //} 
+            //#endregion
+        }
+        /// <summary>发送数据到远程主机</summary>
+        private void SendUDPMessage(object obj)
+        {
+            string message = (string)obj;
+            sendUdpClient = new UdpClient(0);
+            byte[] bytes = System.Text.Encoding.Unicode.GetBytes(message);
+            IPEndPoint iep = new IPEndPoint(initIP, userList[0].port);
+            try
             {
-                SendMessage("Talk," + L_OnlineStatus.SelectedItem + "," + R_SendMessage.Text);
-                AddTalkMessage("我说：" + R_SendMessage.Text);
-                R_SendMessage.Clear();
+                sendUdpClient.Send(bytes, bytes.Length, iep);
+                AddTalkMessage(string.Format("向{0}发送：{1}", iep, message));
+                ClearTextBox();
             }
-            else
+            catch (Exception ex)
             {
-                MessageBox.Show("请先在[当前在线]中选择一个对话者");
+                AddTalkMessage("发送出错:" + ex.Message);
             }
         }
         /// <summary>处理接收的服务器端数据</summary>
@@ -108,6 +168,8 @@ namespace ServerClientTCP
                 switch (command)
                 {
                     case "login":  //格式：login,用户名
+                        Client user = new Client(splitString[1], Convert.ToInt32(splitString[2]));
+                        userList.Add(user);
                         AddOnline(splitString[1]);
                         break;
                     case "logout":  //格式：logout,用户名
@@ -120,6 +182,11 @@ namespace ServerClientTCP
                         AddTalkMessage(string.Format("[{0}]说：{1}",
                             splitString[1], receiveString.Substring(
                             splitString[0].Length + splitString[1].Length + 2)));
+                        //测试当前在线用户列表
+                        foreach (Client target in userList)
+                        {
+                            AddTalkMessage(target.userName +":"+ target.port);
+                        }
                         break;
                     default:
                         AddTalkMessage("什么意思啊：" + receiveString);
@@ -140,22 +207,6 @@ namespace ServerClientTCP
             catch
             {
                 AddTalkMessage("发送失败!");
-            }
-        }
-        /// <summary>【发送】按钮的Click事件</summary>
-        private void buttonSend_Click(object sender, EventArgs e)
-        {
-            if (L_OnlineStatus.SelectedIndex != -1)
-            {
-                //SendMessage("Talk," + listBoxOnlineStatus.SelectedItem + "," + textBoxSend.Text+"\r\n");
-                SendMessage("Talk," + L_OnlineStatus.SelectedItem + "," + R_SendMessage.Text);
-                //本方发言书上例题是等服务器发回给本方后才显示出来，以下语句表示直接显示，不经过服务器绕回
-                AddTalkMessage("我说：" + R_SendMessage.Text);
-                R_SendMessage.Clear();
-            }
-            else
-            {
-                MessageBox.Show("请先在[当前在线]中选择一个对话者");
             }
         }
         /// <summary>关闭窗口时触发的事件</summary>
@@ -234,6 +285,20 @@ namespace ServerClientTCP
             }
         }
 
+        delegate void ClearTextBoxDelegate();
+        private void ClearTextBox()
+        {
+            if (R_SendMessage.InvokeRequired)
+            {
+                ClearTextBoxDelegate d = ClearTextBox;
+                R_SendMessage.Invoke(d);
+            }
+            else
+            {
+                R_SendMessage.Clear();
+                R_SendMessage.Focus();
+            }
+        }
         private void R_SendMessage_TextChanged(object sender, EventArgs e)
         {
             if (R_SendMessage.Text.Length == 0)

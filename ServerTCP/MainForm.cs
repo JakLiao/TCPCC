@@ -63,6 +63,8 @@ namespace ServerTCP
                 }
                 //每接受一个客户端连接,就创建一个对应的线程循环接收该客户端发来的信息
                 User user = new User(newClient);
+                //客户端的端口号
+                user.port = newClient.Client.RemoteEndPoint.ToString().Split(':')[1];
                 Thread threadReceive = new Thread(ReceiveData);
                 threadReceive.Start(user);
                 userList.Add(user);
@@ -126,8 +128,7 @@ namespace ServerTCP
                     case "Login":
                         user.userName = splitString[1];
                         AddItemToUserBox(user.userName);
-                        AddItemToListBox(user.userName);
-                        SendToAllClient(user, receiveString);
+                        SendToAllClient(user, receiveString+","+user.port);
                         break;
                     case "Logout":
                         RemoveItemFromUserBox(user.userName);
@@ -169,11 +170,11 @@ namespace ServerTCP
                 //将字符串写入网络流，此方法会自动附加字符串长度前缀
                 user.bw.Write(message);
                 user.bw.Flush();
-                AddItemToListBox(string.Format("向[{0}]发送：{1}",user.userName, message));
+                AddItemToListBox(string.Format("向[{0}]：{1}发送：{2}",user.userName, user.port, message));
             }
             catch
             {
-                AddItemToListBox(string.Format("向[{0}]发送信息失败",user.userName));
+                AddItemToListBox(string.Format("向[{0}]发送信息失败",user.userName,user.port));
             }
         }
         /// <summary>发送信息给所有客户</summary>
@@ -189,7 +190,7 @@ namespace ServerTCP
                     SendToClient(userList[i], message);
                     if (userList[i].userName != user.userName)
                     {
-                        SendToClient(user, "login," + userList[i].userName);
+                        SendToClient(user, "login," + userList[i].userName +","+ userList[i].port);
                     }
                 }
             }
